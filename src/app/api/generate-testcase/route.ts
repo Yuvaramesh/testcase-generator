@@ -5,16 +5,15 @@ const genAI = new GoogleGenerativeAI(process.env.TEST_CASE_API_KEY!);
 
 export async function POST(req: NextRequest) {
   try {
-    const { prompt, context } = await req.json();
+    const { prompt, context, numberOfTestCases } = await req.json();
 
     const extractedText = context
       .map((item: any) => item.text.trim()) // get only text field and trim
       .join("\n\n"); // join with line breaks between items
 
-    const fullPrompt = `
-You are an expert test case generator.
+    const fullPrompt = `You are an expert test case generator.
 
-Based on the given user prompt and the related context from a document, generate a list of test cases in **valid JSON** format. Follow this strict format exactly:
+Based on the given user prompt and the related context from a document, generate *exactly ${numberOfTestCases} test cases* in *valid JSON* format. Follow this strict format exactly:
 
 [
   {
@@ -26,7 +25,8 @@ Based on the given user prompt and the related context from a document, generate
   }
 ]
 
-⚠️ Strict Rules:
+⚠ Strict Rules:
+- Return exactly ${numberOfTestCases} test cases.
 - Only return a valid JSON array.
 - Do NOT include any explanations, markdown, or comments.
 - Use meaningful and unique test case IDs like TC-001, TC-002, etc.
@@ -40,8 +40,7 @@ ${prompt}
 ---
 
 Context:
-${extractedText}
-    `.trim();
+${extractedText}`.trim();
 
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 

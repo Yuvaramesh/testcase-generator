@@ -6,3 +6,8 @@ type TestCase = {
   expectedResults: string;
   priority: "High" | "Medium" | "Low";
 };
+
+type TestcaseGroup = {
+  heading: string;
+  testcases: TestCase[];
+};

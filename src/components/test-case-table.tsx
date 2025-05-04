@@ -1,6 +1,6 @@
 "use client";
-
-import { useState } from "react";
+import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import {
   Table,
   TableBody,
@@ -44,8 +44,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
-
-// Dummy test case data
+import React from "react";
 
 // Priority badge color mapping
 const priorityColors = {
@@ -55,41 +54,56 @@ const priorityColors = {
 };
 
 export default function TestCaseTable({
-  initialTestCases,
+  setTestCases,
+  testCases,
 }: {
-  initialTestCases: TestCase[];
+  setTestCases: React.Dispatch<React.SetStateAction<TestcaseGroup[]>>;
+  testCases: TestcaseGroup[];
 }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState<{
     key: string;
     direction: "ascending" | "descending";
   } | null>(null);
-  // const [testCases, setTestCases] = useState<TestCase[]>(initialTestCases);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingIndex, setEditingIndex] = useState<[number, number] | null>(
+    null
+  );
   const [editForm, setEditForm] = useState<TestCase | null>(null);
 
-  // Filter test cases based on search term
-  const filteredTestCases = initialTestCases.filter(
-    (testCase) =>
-      testCase.testcaseID.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      testCase.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      testCase.priority.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Inside your component
+  const sortedTestCases = useMemo(() => {
+    const lowerSearch = searchTerm.toLowerCase();
 
-  // Sort test cases
-  const sortedTestCases = [...filteredTestCases].sort((a, b) => {
-    if (!sortConfig) return 0;
+    // Process each heading group
+    const grouped = testCases.map(({ heading, testcases }) => {
+      // Filter
+      const filtered = testcases.filter(
+        (testCase) =>
+          testCase.testcaseID.toLowerCase().includes(lowerSearch) ||
+          testCase.description.toLowerCase().includes(lowerSearch) ||
+          testCase.priority.toLowerCase().includes(lowerSearch)
+      );
 
-    const key = sortConfig.key as keyof typeof a;
+      // Sort
+      if (sortConfig) {
+        const key = sortConfig.key as keyof TestCase;
+        filtered.sort((a, b) => {
+          if (a[key] < b[key])
+            return sortConfig.direction === "ascending" ? -1 : 1;
+          if (a[key] > b[key])
+            return sortConfig.direction === "ascending" ? 1 : -1;
+          return 0;
+        });
+      }
 
-    if (a[key] < b[key]) {
-      return sortConfig.direction === "ascending" ? -1 : 1;
-    }
-    if (a[key] > b[key]) {
-      return sortConfig.direction === "ascending" ? 1 : -1;
-    }
-    return 0;
-  });
+      return {
+        heading,
+        values: filtered,
+      };
+    });
+
+    return grouped.filter((group) => group.values.length > 0); // Exclude empty groups after filtering
+  }, [testCases, searchTerm, sortConfig]);
 
   // Handle sort
   const requestSort = (key: string) => {
@@ -115,14 +129,18 @@ export default function TestCaseTable({
   };
 
   // Start editing a test case
-  const startEditing = (testCase: TestCase) => {
-    setEditingId(testCase.testcaseID);
+  const startEditing = (
+    groupIndex: number,
+    testIndex: number,
+    testCase: TestCase
+  ) => {
+    setEditingIndex([groupIndex, testIndex]);
     setEditForm({ ...testCase, steps: [...testCase.steps] });
   };
 
   // Cancel editing
   const cancelEditing = () => {
-    setEditingId(null);
+    setEditingIndex(null);
     setEditForm(null);
   };
 
@@ -143,13 +161,24 @@ export default function TestCaseTable({
 
   // Save edited test case
   const saveTestCase = () => {
-    if (!editForm) return;
+    if (!editForm || editingIndex === null) return;
 
-    // setTestCases(
-    //   testCases.map((tc) => (tc.testcaseID === editingId ? editForm : tc))
-    // );
+    const [groupIndex, testIndex] = editingIndex;
 
-    setEditingId(null);
+    setTestCases((prev) =>
+      prev.map((group, gIdx) =>
+        gIdx === groupIndex
+          ? {
+              ...group,
+              testcases: group.testcases.map((tc, tIdx) =>
+                tIdx === testIndex ? editForm : tc
+              ),
+            }
+          : group
+      )
+    );
+
+    setEditingIndex(null);
     setEditForm(null);
 
     toast({
@@ -163,7 +192,10 @@ export default function TestCaseTable({
       <CardHeader>
         <CardTitle className="text-xl font-semibold flex items-center">
           Generated Test Cases
-          <Badge className="ml-2 bg-green-600">{initialTestCases.length}</Badge>
+          <Badge className="ml-2 bg-green-600">
+            {" "}
+            {testCases.reduce((acc, group) => acc + group.testcases.length, 0)}
+          </Badge>
         </CardTitle>
         <CardDescription>
           Test cases generated based on the provided document and heading
@@ -215,10 +247,11 @@ export default function TestCaseTable({
                   </div>
                 </TableHead>
                 <TableHead className="w-[100px]">Actions</TableHead>
+                <TableHead className="w-[50px]">Code</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedTestCases.length === 0 ? (
+              {testCases.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={4}
@@ -228,177 +261,225 @@ export default function TestCaseTable({
                   </TableCell>
                 </TableRow>
               ) : (
-                sortedTestCases.map((testCase) => (
-                  <TableRow
-                    key={testCase.testcaseID}
-                    className={
-                      editingId === testCase.testcaseID ? "bg-muted/30" : ""
-                    }
-                  >
-                    <TableCell className="font-medium">
-                      {editingId === testCase.testcaseID ? (
-                        <Input
-                          value={editForm?.testcaseID || ""}
-                          onChange={(e) =>
-                            handleFormChange("testcaseID", e.target.value)
-                          }
-                          className="w-full"
-                        />
-                      ) : (
-                        testCase.testcaseID
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {editingId === testCase.testcaseID ? (
-                        <div className="space-y-4">
-                          <div>
-                            <label className="text-sm font-medium mb-1 block">
-                              Description
-                            </label>
-                            <Textarea
-                              value={editForm?.description || ""}
-                              onChange={(e) =>
-                                handleFormChange("description", e.target.value)
-                              }
-                              className="w-full"
-                              rows={2}
-                            />
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium mb-1 block">
-                              Steps (one per line)
-                            </label>
-                            <Textarea
-                              value={editForm?.steps.join("\n") || ""}
-                              onChange={(e) =>
-                                handleFormChange("steps", e.target.value)
-                              }
-                              className="w-full"
-                              rows={4}
-                            />
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium mb-1 block">
-                              Expected Results
-                            </label>
-                            <Textarea
-                              value={editForm?.expectedResults || ""}
-                              onChange={(e) =>
-                                handleFormChange(
-                                  "expectedResults",
-                                  e.target.value
-                                )
-                              }
-                              className="w-full"
-                              rows={2}
-                            />
-                          </div>
-                        </div>
-                      ) : (
-                        <Accordion type="single" collapsible className="w-full">
-                          <AccordionItem
-                            value={testCase.testcaseID}
-                            className="border-0"
-                          >
-                            <AccordionTrigger className="py-0 hover:no-underline">
-                              <span className="text-left">
-                                {testCase.description}
-                              </span>
-                            </AccordionTrigger>
-                            <AccordionContent>
-                              <div className="mt-2 space-y-4">
+                testCases.map((group, groupIndex) => (
+                  <React.Fragment key={groupIndex}>
+                    {/* Heading row */}
+                    <TableRow>
+                      <TableCell
+                        colSpan={5}
+                        className="bg-muted font-semibold text-base py-3"
+                      >
+                        {group.heading}
+                      </TableCell>
+                    </TableRow>
+
+                    {/* Grouped test cases */}
+                    {group.testcases.map((testCase, index) => {
+                      const isEditing =
+                        editingIndex?.[0] === groupIndex &&
+                        editingIndex?.[1] === index;
+
+                      return (
+                        <TableRow
+                          key={testCase.testcaseID}
+                          className={isEditing ? "bg-muted/30" : ""}
+                        >
+                          {/* ID */}
+                          <TableCell className="font-medium">
+                            {isEditing ? (
+                              <Input
+                                value={editForm?.testcaseID || ""}
+                                onChange={(e) =>
+                                  handleFormChange("testcaseID", e.target.value)
+                                }
+                                className="w-full"
+                              />
+                            ) : (
+                              testCase.testcaseID
+                            )}
+                          </TableCell>
+
+                          {/* Description */}
+                          <TableCell>
+                            {isEditing ? (
+                              <div className="space-y-4">
+                                {/* Description field */}
                                 <div>
-                                  <h4 className="font-semibold text-sm">
-                                    Steps:
-                                  </h4>
-                                  <ol className="list-decimal pl-5 mt-1 space-y-1">
-                                    {testCase.steps.map((step, index) => (
-                                      <li key={index} className="text-sm">
-                                        {step}
-                                      </li>
-                                    ))}
-                                  </ol>
+                                  <label className="text-sm font-medium mb-1 block">
+                                    Description
+                                  </label>
+                                  <Textarea
+                                    value={editForm?.description || ""}
+                                    onChange={(e) =>
+                                      handleFormChange(
+                                        "description",
+                                        e.target.value
+                                      )
+                                    }
+                                    className="w-full"
+                                    rows={2}
+                                  />
                                 </div>
+                                {/* Steps */}
                                 <div>
-                                  <h4 className="font-semibold text-sm">
-                                    Expected Results:
-                                  </h4>
-                                  <p className="text-sm mt-1">
-                                    {testCase.expectedResults}
-                                  </p>
+                                  <label className="text-sm font-medium mb-1 block">
+                                    Steps (one per line)
+                                  </label>
+                                  <Textarea
+                                    value={editForm?.steps.join("\n") || ""}
+                                    onChange={(e) =>
+                                      handleFormChange("steps", e.target.value)
+                                    }
+                                    className="w-full"
+                                    rows={4}
+                                  />
+                                </div>
+                                {/* Expected Results */}
+                                <div>
+                                  <label className="text-sm font-medium mb-1 block">
+                                    Expected Results
+                                  </label>
+                                  <Textarea
+                                    value={editForm?.expectedResults || ""}
+                                    onChange={(e) =>
+                                      handleFormChange(
+                                        "expectedResults",
+                                        e.target.value
+                                      )
+                                    }
+                                    className="w-full"
+                                    rows={2}
+                                  />
                                 </div>
                               </div>
-                            </AccordionContent>
-                          </AccordionItem>
-                        </Accordion>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {editingId === testCase.testcaseID ? (
-                        <Select
-                          value={editForm?.priority || "Medium"}
-                          onValueChange={(value) =>
-                            handleFormChange(
-                              "priority",
-                              value as "High" | "Medium" | "Low"
-                            )
-                          }
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Priority" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="High">High</SelectItem>
-                            <SelectItem value="Medium">Medium</SelectItem>
-                            <SelectItem value="Low">Low</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <Badge
-                          variant={
-                            priorityColors[
-                              testCase.priority as keyof typeof priorityColors
-                            ] as
-                              | "default"
-                              | "secondary"
-                              | "destructive"
-                              | "outline"
-                              | "warning"
-                          }
-                        >
-                          {testCase.priority}
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {editingId === testCase.testcaseID ? (
-                        <div className="flex space-x-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={saveTestCase}
-                          >
-                            <Save className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={cancelEditing}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => startEditing(testCase)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
+                            ) : (
+                              <Accordion
+                                type="single"
+                                collapsible
+                                className="w-full"
+                              >
+                                <AccordionItem
+                                  value={testCase.testcaseID}
+                                  className="border-0"
+                                >
+                                  <AccordionTrigger className="py-0 hover:no-underline">
+                                    <span className="text-left">
+                                      {testCase.description}
+                                    </span>
+                                  </AccordionTrigger>
+                                  <AccordionContent>
+                                    <div className="mt-2 space-y-4">
+                                      <div>
+                                        <h4 className="font-semibold text-sm">
+                                          Steps:
+                                        </h4>
+                                        <ol className="list-decimal pl-5 mt-1 space-y-1">
+                                          {testCase.steps.map(
+                                            (step, stepIndex) => (
+                                              <li
+                                                key={stepIndex}
+                                                className="text-sm"
+                                              >
+                                                {step}
+                                              </li>
+                                            )
+                                          )}
+                                        </ol>
+                                      </div>
+                                      <div>
+                                        <h4 className="font-semibold text-sm">
+                                          Expected Results:
+                                        </h4>
+                                        <p className="text-sm mt-1">
+                                          {testCase.expectedResults}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </AccordionContent>
+                                </AccordionItem>
+                              </Accordion>
+                            )}
+                          </TableCell>
+
+                          {/* Priority */}
+                          <TableCell>
+                            {isEditing ? (
+                              <Select
+                                value={editForm?.priority || "Medium"}
+                                onValueChange={(value) =>
+                                  handleFormChange(
+                                    "priority",
+                                    value as "High" | "Medium" | "Low"
+                                  )
+                                }
+                              >
+                                <SelectTrigger className="w-full">
+                                  <SelectValue placeholder="Priority" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="High">High</SelectItem>
+                                  <SelectItem value="Medium">Medium</SelectItem>
+                                  <SelectItem value="Low">Low</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <Badge
+                                variant={
+                                  priorityColors[
+                                    testCase.priority as keyof typeof priorityColors
+                                  ] as
+                                    | "default"
+                                    | "secondary"
+                                    | "destructive"
+                                    | "outline"
+                                    | "warning"
+                                }
+                              >
+                                {testCase.priority}
+                              </Badge>
+                            )}
+                          </TableCell>
+
+                          {/* Actions */}
+                          <TableCell>
+                            {isEditing ? (
+                              <div className="flex space-x-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={saveTestCase}
+                                >
+                                  <Save className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={cancelEditing}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() =>
+                                  startEditing(groupIndex, index, testCase)
+                                }
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Button className=" bg-green-600 text-white rounded-lg">
+                              Generate Code
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </React.Fragment>
                 ))
               )}
             </TableBody>
