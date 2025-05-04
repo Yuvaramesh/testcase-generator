@@ -10,7 +10,7 @@ export default function Home() {
       </h1>
 
       <Tabs defaultValue="test-cases" className="w-full py-4">
-        <TabsList className="grid w-11/12 py-8    place-content-center grid-cols-2 mb-8">
+        <TabsList className="grid w-11/12 py-8 mx-auto place-content-center grid-cols-2 mb-8">
           <TabsTrigger className=" py-3" value="test-cases">
             Test Case Generator
           </TabsTrigger>
