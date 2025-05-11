@@ -1,36 +1,104 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🧪 Test Case Generator & Code Generation Platform
 
-## Getting Started
+This is a powerful AI-driven platform to generate test cases and test automation code from uploaded documents or prompts. Built using **Next.js**, **Vector Databases (Qdrant)**, and **LLMs (Gemini, DeepSeek, etc.)**, this tool simplifies the testing process for QA engineers and developers.
 
-First, run the development server:
+## 🚀 Features
+
+* 🔍 Upload documents (e.g., Requirement Specs, Test Plans)
+* 🧠 Extract and chunk content with vector embeddings
+* 💬 Chat interface powered by LLM for context-aware test case generation
+* ⚙️ Generate code snippets for testing frameworks (Selenium, Playwright, Cypress)
+* 🌐 Supports multiple languages (Python, Java, JS, etc.)
+* 🎛️ Sidebar to choose framework, tool, and language preferences
+* 💾 Save and download generated test cases
+
+## 🖼️ UI Preview
+
+> *Add a screenshot or GIF here showing the file upload and chat interface.*
+
+## 🛠️ Tech Stack
+
+* **Frontend**: Next.js (App Router), Tailwind CSS, TypeScript
+* **LLMs**: Gemini API, DeepSeek via Hugging Face
+* **Vector DB**: Qdrant
+* **Embeddings**: `sentence-transformers` or `openai-embeddings`
+* **Backend API**: Node.js / Python integration for file processing and LLM calls
+
+## 📦 Getting Started
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Start the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open your browser at [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📁 Folder Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+/app
+  /api             --> API routes for chat, file upload
+  /components      --> UI components (Sidebar, ChatBox, FileUploader)
+  /lib             --> Utility functions (vector DB interaction, chunking)
+  /types           --> TypeScript types
+/public
+```
 
-## Learn More
+## ✨ How It Works
 
-To learn more about Next.js, take a look at the following resources:
+1. **Upload Document** – File is parsed and split into semantic chunks.
+2. **Embed & Store** – Chunks are embedded and stored in Qdrant.
+3. **Chat with Context** – Prompt the chatbot to generate test cases using context from the uploaded file.
+4. **Generate Code** – Based on selected framework/tool/language, auto-generate test scripts.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📄 Example Use Cases
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+* Generate Playwright scripts from uploaded test plans
+* Get BDD-style test cases from requirement docs
+* Translate manual test steps into automation code
+* Export test scripts for Selenium in Python or Java
 
-## Deploy on Vercel
+## 🧠 LLM Configuration
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+You can easily switch between LLMs:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```ts
+const model = process.env.LLM_PROVIDER === "gemini" ? GeminiClient : DeepSeekClient;
+```
+
+Update `.env.local`:
+
+```
+LLM_PROVIDER=gemini
+HUGGINGFACE_API_KEY=your_key
+GEMINI_API_KEY=your_key
+```
+
+## 📤 Deploy on Vercel
+
+Deploy your Next.js project to Vercel with one click:
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new)
+
+## 📚 Resources
+
+* [Next.js Documentation](https://nextjs.org/docs)
+* [Qdrant Docs](https://qdrant.tech/documentation/)
+* [Gemini API](https://ai.google.dev/)
+* [Hugging Face Inference API](https://huggingface.co/docs/api-inference)
+
+## 🧑‍💻 Author
+
+**Yuva Sri**
+[Portfolio](https://yuva-sri-ramesh-portfolio.vercel.app) • [LinkedIn](https://www.linkedin.com/in/yuva-sri-ramesh/) • [GitHub](https://github.com/Yuva-Sri-Ramesh)
+
+## Demo - (On Going)
+
+**Do Check it out** - https://xeno-test.vercel.app/
