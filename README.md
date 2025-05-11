@@ -12,10 +12,6 @@ This is a powerful AI-driven platform to generate test cases and test automation
 * 🎛️ Sidebar to choose framework, tool, and language preferences
 * 💾 Save and download generated test cases
 
-## 🖼️ UI Preview
-
-> *Add a screenshot or GIF here showing the file upload and chat interface.*
-
 ## 🛠️ Tech Stack
 
 * **Frontend**: Next.js (App Router), Tailwind CSS, TypeScript
